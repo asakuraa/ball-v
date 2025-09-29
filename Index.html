@@ -1,462 +1,417 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Save, X, Download, Upload } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Pair Betting Tracker</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-const BettingTracker = () => {
-const [teams, setTeams] = useState([
-'Barcelona', 'Real Madrid', 'Manchester United', 'Liverpool',
-'Bayern Munich', 'PSG', 'Chelsea', 'Arsenal',
-'Manchester City', 'Juventus', 'AC Milan', 'Inter Milan'
-]);
-const [bets, setBets] = useState([]);
-const [showAddForm, setShowAddForm] = useState(false);
-const [showEditTeams, setShowEditTeams] = useState(false);
-const [searchTerm, setSearchTerm] = useState('');
-const [selectedPair, setSelectedPair] = useState('');
-const [newTeamName, setNewTeamName] = useState('');
-const [formData, setFormData] = useState({
-teamA: '',
-teamB: '',
-goalLine: '1.5',
-timeFrame: 'fulltime',
-odds: '',
-result: '',
-actualGoals: '',
-actualScore: '',
-date: new Date().toISOString().split('T')[0]
-});
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-// Load from localStorage on mount
-useEffect(() => {
-const savedTeams = localStorage.getItem('bettingTeams');
-const savedBets = localStorage.getItem('bettingBets');
-if (savedTeams) setTeams(JSON.parse(savedTeams));
-if (savedBets) setBets(JSON.parse(savedBets));
-}, []);
-
-// Save to localStorage whenever data changes
-useEffect(() => {
-localStorage.setItem('bettingTeams', JSON.stringify(teams));
-}, [teams]);
-
-useEffect(() => {
-localStorage.setItem('bettingBets', JSON.stringify(bets));
-}, [bets]);
-
-const handleSubmit = () => {
-if (!formData.teamA || !formData.teamB || !formData.odds || !formData.result) {
-alert('Please fill in all required fields');
-return;
-}
-
-if (formData.teamA === formData.teamB) {
-alert('Team A and Team B must be different');
-return;
-}
-
-const newBet = {
-id: Date.now(),
-...formData,
-odds: parseFloat(formData.odds),
-actualGoals: parseFloat(formData.actualGoals) || 0
-};
-
-setBets([...bets, newBet]);
-setFormData({
-teamA: '',
-teamB: '',
-goalLine: '1.5',
-timeFrame: 'fulltime',
-odds: '',
-result: '',
-actualGoals: '',
-actualScore: '',
-date: new Date().toISOString().split('T')[0]
-});
-setShowAddForm(false);
-};
-
-const normalizePair = (teamA, teamB) => {
-// Always sort alphabetically so "A vs B" and "B vs A" are treated the same
-return [teamA, teamB].sort().join(' vs ');
-};
-
-const getTeamPairs = () => {
-const pairMap = new Map();
-
-bets.forEach(bet => {
-const pair = normalizePair(bet.teamA, bet.teamB);
-if (!pairMap.has(pair)) {
-const [t1, t2] = pair.split(' vs ');
-pairMap.set(pair, { teamA: t1, teamB: t2, wins: 0, losses: 0, bets: [] });
-}
-const pairData = pairMap.get(pair);
-pairData.bets.push(bet);
-if (bet.result === 'win') pairData.wins++;
-if (bet.result === 'lose') pairData.losses++;
-});
-
-return Array.from(pairMap.values());
-};
-
-const filteredPairs = getTeamPairs().filter(pair => {
-const searchLower = searchTerm.toLowerCase();
-return pair.teamA.toLowerCase().includes(searchLower) ||
-pair.teamB.toLowerCase().includes(searchLower);
-});
-
-const getSelectedPairBets = () => {
-if (!selectedPair) return [];
-const [t1, t2] = selectedPair.split(' vs ');
-return bets.filter(bet => {
-const normalized = normalizePair(bet.teamA, bet.teamB);
-return normalized === selectedPair;
-});
-};
-
-const addTeam = () => {
-if (newTeamName.trim() && !teams.includes(newTeamName.trim())) {
-setTeams([...teams, newTeamName.trim()].sort());
-setNewTeamName('');
-}
-};
-
-const deleteTeam = (teamName) => {
-if (confirm(`Delete ${teamName}? This won't delete existing bets.`)) {
-setTeams(teams.filter(t => t !== teamName));
-}
-};
-
-const exportData = () => {
-const data = {
-teams,
-bets,
-exportDate: new Date().toISOString()
-};
-const dataStr = JSON.stringify(data, null, 2);
-const dataBlob = new Blob([dataStr], { type: 'application/json' });
-const url = URL.createObjectURL(dataBlob);
-const link = document.createElement('a');
-link.href = url;
-link.download = `betting-data-${new Date().toISOString().split('T')[0]}.json`;
-link.click();
-URL.revokeObjectURL(url);
-};
-
-const importData = (event) => {
-const file = event.target.files[0];
-if (!file) return;
-
-const reader = new FileReader();
-reader.onload = (e) => {
-try {
-const data = JSON.parse(e.target.result);
-if (data.teams && data.bets) {
-if (confirm('This will replace all current data. Continue?')) {
-setTeams(data.teams);
-setBets(data.bets);
-alert('Data imported successfully!');
-}
-} else {
-alert('Invalid file format');
-}
-} catch (error) {
-alert('Error reading file');
-}
-};
-reader.readAsText(file);
-event.target.value = '';
-};
-
-return (
-<div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
-    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Team Pair Betting Tracker</h1>
-            <div className="flex gap-3">
-                <button
-                        onClick={exportData}
-                        className="bg-green-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
-                >
-                    <Download size={20} />
-                    Export
-                </button>
-                <label className="bg-purple-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors cursor-pointer">
-                    <Upload size={20} />
-                    Import
-                    <input
-                            type="file"
-                            accept=".json"
-                            onChange={importData}
-                            className="hidden"
-                    />
-                </label>
-                <button
-                        onClick={() => setShowEditTeams(!showEditTeams)}
-                className="bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition-colors"
-                >
-                <Edit2 size={20} />
-                Edit Teams
-                </button>
-                <button
-                        onClick={() => setShowAddForm(!showAddForm)}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors text-lg"
-                >
-                <Plus size={24} />
-                Add Bet
-                </button>
-            </div>
-        </div>
-
-        {/* Edit Teams Panel */}
-        {showEditTeams && (
-        <div className="bg-gray-50 p-6 rounded-lg mb-6 border-2 border-gray-300">
-            <h3 className="text-xl font-semibold mb-4">Manage Teams</h3>
-            <div className="flex gap-2 mb-4">
-                <input
-                        type="text"
-                        value={newTeamName}
-                        onChange={(e) => setNewTeamName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addTeam()}
-                placeholder="Add new team name..."
-                className="flex-1 p-3 border border-gray-300 rounded-md"
-                />
-                <button
-                        onClick={addTeam}
-                        className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700"
-                >
-                    Add
-                </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                {teams.map(team => (
-                <div key={team} className="flex items-center justify-between bg-white p-2 rounded border">
-                    <span className="text-sm">{team}</span>
-                    <button
-                            onClick={() => deleteTeam(team)}
-                    className="text-red-600 hover:text-red-800"
-                    >
-                    <Trash2 size={16} />
-                    </button>
-                </div>
-                ))}
-            </div>
-        </div>
-        )}
-
-        {/* Add Bet Form */}
-        {showAddForm && (
-        <div className="bg-gray-50 p-6 rounded-lg mb-6 border-2 border-blue-200">
-            <h3 className="text-xl font-semibold mb-4">Add New Bet</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Team A</label>
-                    <select
-                            value={formData.teamA}
-                            onChange={(e) => setFormData({...formData, teamA: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-md text-lg"
-                    >
-                    <option value="">Select Team A</option>
-                    {teams.map(team => (
-                    <option key={team} value={team}>{team}</option>
-                    ))}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Team B</label>
-                    <select
-                            value={formData.teamB}
-                            onChange={(e) => setFormData({...formData, teamB: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-md text-lg"
-                    >
-                    <option value="">Select Team B</option>
-                    {teams.map(team => (
-                    <option key={team} value={team}>{team}</option>
-                    ))}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Goal Line (Over)</label>
-                    <input
-                            type="text"
-                            value={formData.goalLine}
-                            onChange={(e) => setFormData({...formData, goalLine: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-md text-lg"
-                    placeholder="e.g., 1.5, 2.5, 3.0"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                    <select
-                            value={formData.timeFrame}
-                            onChange={(e) => setFormData({...formData, timeFrame: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-md text-lg"
-                    >
-                    <option value="fulltime">Full Time</option>
-                    <option value="firsthalf">First Half</option>
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Odds</label>
-                    <input
-                            type="number"
-                            step="0.01"
-                            value={formData.odds}
-                            onChange={(e) => setFormData({...formData, odds: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-md text-lg"
-                    placeholder="e.g., 1.85"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Result</label>
-                    <select
-                            value={formData.result}
-                            onChange={(e) => setFormData({...formData, result: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-md text-lg"
-                    >
-                    <option value="">Select Result</option>
-                    <option value="win">Win</option>
-                    <option value="lose">Lose</option>
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Actual Goals</label>
-                    <input
-                            type="number"
-                            step="0.5"
-                            value={formData.actualGoals}
-                            onChange={(e) => setFormData({...formData, actualGoals: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-md text-lg"
-                    placeholder="Total goals"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
-                    <input
-                            type="text"
-                            value={formData.actualScore}
-                            onChange={(e) => setFormData({...formData, actualScore: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-md text-lg"
-                    placeholder="e.g., 2-1"
-                    />
-                </div>
-                <div className="md:col-span-2 lg:col-span-3">
-                    <button
-                            onClick={handleSubmit}
-                            className="bg-green-600 text-white px-8 py-3 rounded-md hover:bg-green-700 transition-colors text-lg font-semibold"
-                    >
-                        Save Bet
-                    </button>
-                </div>
-            </div>
-        </div>
-        )}
-
-        {/* Search */}
-        <div className="mb-6">
-            <div className="relative">
-                <Search className="absolute left-3 top-4 text-gray-400" size={24} />
-                <input
-                        type="text"
-                        placeholder="Search team name..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 p-4 text-xl border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                />
-            </div>
-        </div>
-
-        {/* Team Pairs Grid */}
-        {filteredPairs.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 text-xl">
-            {bets.length === 0 ? 'No bets yet. Add your first bet!' : 'No teams found'}
-        </div>
-        ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {filteredPairs.map((pair) => {
-            const pairKey = `${pair.teamA} vs ${pair.teamB}`;
-            const isSelected = selectedPair === pairKey;
-            return (
-            <div
-                    key={pairKey}
-                    onClick={() => setSelectedPair(isSelected ? '' : pairKey)}
-            className={`p-6 rounded-lg cursor-pointer transition-all border-2 ${
-            isSelected
-            ? 'border-blue-500 bg-blue-50 shadow-lg scale-105'
-            : 'border-gray-200 bg-white hover:shadow-md hover:border-blue-300'
-            }`}
-            >
-            <h3 className="text-xl font-bold text-gray-800 mb-4">{pairKey}</h3>
-            <div className="flex justify-around items-center">
-                <div className="text-center">
-                    <div className="text-4xl font-bold text-green-600">{pair.wins}</div>
-                    <div className="text-sm text-gray-600 mt-1">Wins</div>
-                </div>
-                <div className="text-4xl text-gray-300">-</div>
-                <div className="text-center">
-                    <div className="text-4xl font-bold text-red-600">{pair.losses}</div>
-                    <div className="text-sm text-gray-600 mt-1">Losses</div>
-                </div>
-            </div>
-        </div>
+        const Plus = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
         );
-        })}
-    </div>
-    )}
 
-    {/* Selected Pair Details */}
-    {selectedPair && (
-    <div className="mt-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">{selectedPair} - Bet History</h2>
-        <div className="overflow-x-auto">
-            <table className="w-full border-collapse border-2 border-gray-300">
-                <thead className="bg-gray-200">
-                <tr>
-                    <th className="border border-gray-300 p-3 text-left">Date</th>
-                    <th className="border border-gray-300 p-3 text-left">Match</th>
-                    <th className="border border-gray-300 p-3 text-left">Over Goal Line</th>
-                    <th className="border border-gray-300 p-3 text-left">Time</th>
-                    <th className="border border-gray-300 p-3 text-left">Odds</th>
-                    <th className="border border-gray-300 p-3 text-left">Result</th>
-                    <th className="border border-gray-300 p-3 text-left">Goals</th>
-                    <th className="border border-gray-300 p-3 text-left">Score</th>
-                </tr>
-                </thead>
-                <tbody>
-                {getSelectedPairBets().map((bet) => (
-                <tr key={bet.id} className="hover:bg-gray-50">
-                    <td className="border border-gray-300 p-3">{bet.date}</td>
-                    <td className="border border-gray-300 p-3">{bet.teamA} vs {bet.teamB}</td>
-                    <td className="border border-gray-300 p-3">
-                        <span className={`px-3 py-1 rounded font-semibold ${
-                              bet.betType === 'over' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                        {bet.betType.toUpperCase()}
-                        </span>
-                    </td>
-                    <td className="border border-gray-300 p-3 font-bold text-lg">{bet.goalLine}</td>
-                    <td className="border border-gray-300 p-3">
-                        {bet.timeFrame === 'fulltime' ? 'FT' : 'HT'}
-                    </td>
-                    <td className="border border-gray-300 p-3 font-semibold">{bet.odds}</td>
-                    <td className="border border-gray-300 p-3">
-                        <span className={`px-3 py-1 rounded font-bold text-lg ${
-                              bet.result === 'win' ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900'
-                        }`}>
-                        {bet.result.toUpperCase()}
-                        </span>
-                    </td>
-                    <td className="border border-gray-300 p-3 font-semibold">{bet.actualGoals || '-'}</td>
-                    <td className="border border-gray-300 p-3">{bet.actualScore || '-'}</td>
-                </tr>
-                ))}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    )}
-</div>
-</div>
-);
-};
+        const Search = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+        );
 
-export default BettingTracker;
+        const Edit2 = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+            </svg>
+        );
+
+        const Trash2 = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+        );
+
+        const Download = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        );
+
+        const Upload = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+        );
+
+        function BettingTracker() {
+            const defaultTeams = ['Barcelona', 'Real Madrid', 'Manchester United', 'Liverpool', 'Bayern Munich', 'PSG', 'Chelsea', 'Arsenal', 'Manchester City', 'Juventus', 'AC Milan', 'Inter Milan'];
+            
+            const [teams, setTeams] = useState(defaultTeams);
+            const [bets, setBets] = useState([]);
+            const [showAddForm, setShowAddForm] = useState(false);
+            const [showEditTeams, setShowEditTeams] = useState(false);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedPair, setSelectedPair] = useState('');
+            const [newTeamName, setNewTeamName] = useState('');
+            const [formData, setFormData] = useState({
+                teamA: '',
+                teamB: '',
+                goalLine: '1.5',
+                timeFrame: 'fulltime',
+                odds: '',
+                result: '',
+                actualGoals: '',
+                actualScore: '',
+                date: new Date().toISOString().split('T')[0]
+            });
+
+            useEffect(() => {
+                const savedTeams = localStorage.getItem('bettingTeams');
+                const savedBets = localStorage.getItem('bettingBets');
+                if (savedTeams) setTeams(JSON.parse(savedTeams));
+                if (savedBets) setBets(JSON.parse(savedBets));
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem('bettingTeams', JSON.stringify(teams));
+            }, [teams]);
+
+            useEffect(() => {
+                localStorage.setItem('bettingBets', JSON.stringify(bets));
+            }, [bets]);
+
+            const handleSubmit = () => {
+                if (!formData.teamA || !formData.teamB || !formData.odds || !formData.result) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+                
+                if (formData.teamA === formData.teamB) {
+                    alert('Team A and Team B must be different');
+                    return;
+                }
+                
+                const newBet = {
+                    id: Date.now(),
+                    teamA: formData.teamA,
+                    teamB: formData.teamB,
+                    goalLine: formData.goalLine,
+                    timeFrame: formData.timeFrame,
+                    odds: parseFloat(formData.odds),
+                    result: formData.result,
+                    actualGoals: parseFloat(formData.actualGoals) || 0,
+                    actualScore: formData.actualScore,
+                    date: formData.date
+                };
+                
+                setBets([...bets, newBet]);
+                setFormData({
+                    teamA: '',
+                    teamB: '',
+                    goalLine: '1.5',
+                    timeFrame: 'fulltime',
+                    odds: '',
+                    result: '',
+                    actualGoals: '',
+                    actualScore: '',
+                    date: new Date().toISOString().split('T')[0]
+                });
+                setShowAddForm(false);
+            };
+
+            const normalizePair = (teamA, teamB) => {
+                return [teamA, teamB].sort().join(' vs ');
+            };
+
+            const getTeamPairs = () => {
+                const pairMap = new Map();
+                
+                bets.forEach(bet => {
+                    const pair = normalizePair(bet.teamA, bet.teamB);
+                    if (!pairMap.has(pair)) {
+                        const parts = pair.split(' vs ');
+                        pairMap.set(pair, { teamA: parts[0], teamB: parts[1], wins: 0, losses: 0, bets: [] });
+                    }
+                    const pairData = pairMap.get(pair);
+                    pairData.bets.push(bet);
+                    if (bet.result === 'win') pairData.wins++;
+                    if (bet.result === 'lose') pairData.losses++;
+                });
+                
+                return Array.from(pairMap.values());
+            };
+
+            const filteredPairs = getTeamPairs().filter(pair => {
+                const searchLower = searchTerm.toLowerCase();
+                return pair.teamA.toLowerCase().includes(searchLower) || pair.teamB.toLowerCase().includes(searchLower);
+            });
+
+            const getSelectedPairBets = () => {
+                if (!selectedPair) return [];
+                return bets.filter(bet => {
+                    const normalized = normalizePair(bet.teamA, bet.teamB);
+                    return normalized === selectedPair;
+                });
+            };
+
+            const addTeam = () => {
+                if (newTeamName.trim() && !teams.includes(newTeamName.trim())) {
+                    setTeams([...teams, newTeamName.trim()].sort());
+                    setNewTeamName('');
+                }
+            };
+
+            const deleteTeam = (teamName) => {
+                if (window.confirm('Delete ' + teamName + '? This will not delete existing bets.')) {
+                    setTeams(teams.filter(t => t !== teamName));
+                }
+            };
+
+            const exportData = () => {
+                const data = {
+                    teams: teams,
+                    bets: bets,
+                    exportDate: new Date().toISOString()
+                };
+                const dataStr = JSON.stringify(data, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'betting-data-' + new Date().toISOString().split('T')[0] + '.json';
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const importData = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.teams && data.bets) {
+                            if (window.confirm('This will replace all current data. Continue?')) {
+                                setTeams(data.teams);
+                                setBets(data.bets);
+                                alert('Data imported successfully!');
+                            }
+                        } else {
+                            alert('Invalid file format');
+                        }
+                    } catch (error) {
+                        alert('Error reading file');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            };
+
+            return (
+                <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
+                    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                        <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+                            <h1 className="text-3xl font-bold text-gray-800">Team Pair Betting Tracker</h1>
+                            <div className="flex gap-3 flex-wrap">
+                                <button onClick={exportData} className="bg-green-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors">
+                                    <Download />
+                                    Export
+                                </button>
+                                <label className="bg-purple-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors cursor-pointer">
+                                    <Upload />
+                                    Import
+                                    <input type="file" accept=".json" onChange={importData} className="hidden" />
+                                </label>
+                                <button onClick={() => setShowEditTeams(!showEditTeams)} className="bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition-colors">
+                                    <Edit2 />
+                                    Edit Teams
+                                </button>
+                                <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors text-lg">
+                                    <Plus />
+                                    Add Bet
+                                </button>
+                            </div>
+                        </div>
+
+                        {showEditTeams && (
+                            <div className="bg-gray-50 p-6 rounded-lg mb-6 border-2 border-gray-300">
+                                <h3 className="text-xl font-semibold mb-4">Manage Teams</h3>
+                                <div className="flex gap-2 mb-4">
+                                    <input type="text" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addTeam()} placeholder="Add new team name..." className="flex-1 p-3 border border-gray-300 rounded-md" />
+                                    <button onClick={addTeam} className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700">Add</button>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                    {teams.map(team => (
+                                        <div key={team} className="flex items-center justify-between bg-white p-2 rounded border">
+                                            <span className="text-sm">{team}</span>
+                                            <button onClick={() => deleteTeam(team)} className="text-red-600 hover:text-red-800">
+                                                <Trash2 />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {showAddForm && (
+                            <div className="bg-gray-50 p-6 rounded-lg mb-6 border-2 border-blue-200">
+                                <h3 className="text-xl font-semibold mb-4">Add New Bet</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Team A</label>
+                                        <select value={formData.teamA} onChange={(e) => setFormData({...formData, teamA: e.target.value})} className="w-full p-3 border border-gray-300 rounded-md text-lg">
+                                            <option value="">Select Team A</option>
+                                            {teams.map(team => (<option key={team} value={team}>{team}</option>))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Team B</label>
+                                        <select value={formData.teamB} onChange={(e) => setFormData({...formData, teamB: e.target.value})} className="w-full p-3 border border-gray-300 rounded-md text-lg">
+                                            <option value="">Select Team B</option>
+                                            {teams.map(team => (<option key={team} value={team}>{team}</option>))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Goal Line (Over)</label>
+                                        <input type="text" value={formData.goalLine} onChange={(e) => setFormData({...formData, goalLine: e.target.value})} className="w-full p-3 border border-gray-300 rounded-md text-lg" placeholder="e.g., 1.5, 2.5, 3.0" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                        <select value={formData.timeFrame} onChange={(e) => setFormData({...formData, timeFrame: e.target.value})} className="w-full p-3 border border-gray-300 rounded-md text-lg">
+                                            <option value="fulltime">Full Time</option>
+                                            <option value="firsthalf">First Half</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Odds</label>
+                                        <input type="number" step="0.01" value={formData.odds} onChange={(e) => setFormData({...formData, odds: e.target.value})} className="w-full p-3 border border-gray-300 rounded-md text-lg" placeholder="e.g., 1.85" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Result</label>
+                                        <select value={formData.result} onChange={(e) => setFormData({...formData, result: e.target.value})} className="w-full p-3 border border-gray-300 rounded-md text-lg">
+                                            <option value="">Select Result</option>
+                                            <option value="win">Win</option>
+                                            <option value="lose">Lose</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Actual Goals</label>
+                                        <input type="number" step="0.5" value={formData.actualGoals} onChange={(e) => setFormData({...formData, actualGoals: e.target.value})} className="w-full p-3 border border-gray-300 rounded-md text-lg" placeholder="Total goals" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
+                                        <input type="text" value={formData.actualScore} onChange={(e) => setFormData({...formData, actualScore: e.target.value})} className="w-full p-3 border border-gray-300 rounded-md text-lg" placeholder="e.g., 2-1" />
+                                    </div>
+                                    <div className="md:col-span-2 lg:col-span-3">
+                                        <button onClick={handleSubmit} className="bg-green-600 text-white px-8 py-3 rounded-md hover:bg-green-700 transition-colors text-lg font-semibold">Save Bet</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mb-6">
+                            <div className="relative">
+                                <div className="absolute left-3 top-4 text-gray-400"><Search /></div>
+                                <input type="text" placeholder="Search team name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-12 p-4 text-xl border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
+                            </div>
+                        </div>
+
+                        {filteredPairs.length === 0 ? (
+                            <div className="text-center py-12 text-gray-500 text-xl">
+                                {bets.length === 0 ? 'No bets yet. Add your first bet!' : 'No teams found'}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                                {filteredPairs.map((pair) => {
+                                    const pairKey = pair.teamA + ' vs ' + pair.teamB;
+                                    const isSelected = selectedPair === pairKey;
+                                    return (
+                                        <div key={pairKey} onClick={() => setSelectedPair(isSelected ? '' : pairKey)} className={'p-6 rounded-lg cursor-pointer transition-all border-2 ' + (isSelected ? 'border-blue-500 bg-blue-50 shadow-lg scale-105' : 'border-gray-200 bg-white hover:shadow-md hover:border-blue-300')}>
+                                            <h3 className="text-xl font-bold text-gray-800 mb-4">{pairKey}</h3>
+                                            <div className="flex justify-around items-center">
+                                                <div className="text-center">
+                                                    <div className="text-4xl font-bold text-green-600">{pair.wins}</div>
+                                                    <div className="text-sm text-gray-600 mt-1">Wins</div>
+                                                </div>
+                                                <div className="text-4xl text-gray-300">-</div>
+                                                <div className="text-center">
+                                                    <div className="text-4xl font-bold text-red-600">{pair.losses}</div>
+                                                    <div className="text-sm text-gray-600 mt-1">Losses</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {selectedPair && (
+                            <div className="mt-8">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-4">{selectedPair} - Bet History</h2>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse border-2 border-gray-300">
+                                        <thead className="bg-gray-200">
+                                            <tr>
+                                                <th className="border border-gray-300 p-3 text-left">Date</th>
+                                                <th className="border border-gray-300 p-3 text-left">Match</th>
+                                                <th className="border border-gray-300 p-3 text-left">Over Goal Line</th>
+                                                <th className="border border-gray-300 p-3 text-left">Time</th>
+                                                <th className="border border-gray-300 p-3 text-left">Odds</th>
+                                                <th className="border border-gray-300 p-3 text-left">Result</th>
+                                                <th className="border border-gray-300 p-3 text-left">Goals</th>
+                                                <th className="border border-gray-300 p-3 text-left">Score</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {getSelectedPairBets().map((bet) => (
+                                                <tr key={bet.id} className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 p-3">{bet.date}</td>
+                                                    <td className="border border-gray-300 p-3">{bet.teamA} vs {bet.teamB}</td>
+                                                    <td className="border border-gray-300 p-3 font-bold text-lg">Over {bet.goalLine}</td>
+                                                    <td className="border border-gray-300 p-3">{bet.timeFrame === 'fulltime' ? 'FT' : 'HT'}</td>
+                                                    <td className="border border-gray-300 p-3 font-semibold">{bet.odds}</td>
+                                                    <td className="border border-gray-300 p-3">
+                                                        <span className={'px-3 py-1 rounded font-bold text-lg ' + (bet.result === 'win' ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900')}>
+                                                            {bet.result.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td className="border border-gray-300 p-3 font-semibold">{bet.actualGoals || '-'}</td>
+                                                    <td className="border border-gray-300 p-3">{bet.actualScore || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<BettingTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
