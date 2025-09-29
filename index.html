@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Pair Stats</title>
+    <title>Team Pair</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -74,17 +74,13 @@
         const [searchTerm, setSearchTerm] = useState('');
         const [selectedPair, setSelectedPair] = useState('');
         const [newTeamName, setNewTeamName] = useState('');
-        const [showAllBets, setShowAllBets] = useState(false);
-        const [currentPage, setCurrentPage] = useState(1);
-        const [editingBet, setEditingBet] = useState(null);
-        const betsPerPage = 20;
         const [formData, setFormData] = useState({
             teamA: '',
             teamB: '',
             goalLine: '2.75',
             timeFrame: 'fulltime',
             bettingScore: '',
-            odds: '',
+            odds: '1',
             result: '',
             actualGoals: '',
             actualScore: '',
@@ -138,7 +134,7 @@
                 goalLine: '2.75',
                 timeFrame: 'fulltime',
                 bettingScore: '',
-                odds: '',
+                odds: '1',
                 result: '',
                 actualGoals: '',
                 actualScore: '',
@@ -241,43 +237,11 @@
             event.target.value = '';
         };
 
-        const deleteBet = (betId) => {
-            if (window.confirm('Delete this bet?')) {
-                setBets(bets.filter(b => b.id !== betId));
-            }
-        };
-
-        const startEditBet = (bet) => {
-            setEditingBet(bet);
-        };
-
-        const saveEditBet = () => {
-            setBets(bets.map(b => b.id === editingBet.id ? editingBet : b));
-            setEditingBet(null);
-        };
-
-        const cancelEditBet = () => {
-            setEditingBet(null);
-        };
-
-        const getAllBetsSorted = () => {
-            return [...bets].sort((a, b) => b.id - a.id);
-        };
-
-        const getPaginatedBets = () => {
-            const sorted = getAllBetsSorted();
-            const startIndex = (currentPage - 1) * betsPerPage;
-            const endIndex = startIndex + betsPerPage;
-            return sorted.slice(startIndex, endIndex);
-        };
-
-        const totalPages = Math.ceil(bets.length / betsPerPage);
-
         return (
             <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
                 <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                     <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
-                        <h1 className="text-3xl font-bold text-gray-800">Team Pair Stats</h1>
+                        <h1 className="text-3xl font-bold text-gray-800">Team Pair</h1>
                         <div className="flex gap-3 flex-wrap">
                             <button onClick={exportData} className="bg-green-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors">
                                 <Download />
@@ -295,17 +259,6 @@
                             <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors text-lg">
                                 <Plus />
                                 Add Bet
-                            </button>
-                            <button onClick={() => setShowAllBets(!showAllBets)} className="bg-indigo-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors text-lg">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="8" y1="6" x2="21" y2="6"></line>
-                                    <line x1="8" y1="12" x2="21" y2="12"></line>
-                                    <line x1="8" y1="18" x2="21" y2="18"></line>
-                                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                                </svg>
-                                All Bets
                             </button>
                         </div>
                     </div>
@@ -469,7 +422,6 @@
                                 </table>
                             </div>
                         </div>
-                    )}
                     )}
                 </div>
             </div>
