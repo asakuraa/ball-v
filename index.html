@@ -162,6 +162,9 @@
                 if (bet.result === 'halfwin') pairData.wins += 0.5;
                 if (bet.result === 'halfloss') pairData.losses += 0.5;
                 if (bet.result === 'lose') pairData.losses++;
+                if (bet.result === 'draw') {
+                    // Draw doesn't count as win or loss
+                }
             });
 
             return Array.from(pairMap.values());
@@ -323,6 +326,7 @@
                                         <option value="">Select Result</option>
                                         <option value="win">Won</option>
                                         <option value="halfwin">Half Won</option>
+                                        <option value="draw">Draw</option>
                                         <option value="halfloss">Half Loss</option>
                                         <option value="lose">Loss</option>
                                     </select>
@@ -406,8 +410,8 @@
                                             <td className="border border-gray-300 p-3">{bet.timeFrame === 'fulltime' ? 'FT' : 'HT'}</td>
                                             <td className="border border-gray-300 p-3 font-semibold">{bet.odds}</td>
                                             <td className="border border-gray-300 p-3">
-                                                        <span className={'px-3 py-1 rounded font-bold text-lg ' + (bet.result === 'win' ? 'bg-green-200 text-green-900' : bet.result === 'halfwin' ? 'bg-green-100 text-green-800' : bet.result === 'halfloss' ? 'bg-red-100 text-red-800' : 'bg-red-200 text-red-900')}>
-                                                            {bet.result === 'win' ? 'WON' : bet.result === 'halfwin' ? 'HALF WON' : bet.result === 'halfloss' ? 'HALF LOSS' : 'LOSS'}
+                                                        <span className={'px-3 py-1 rounded font-bold text-lg ' + (bet.result === 'win' ? 'bg-green-200 text-green-900' : bet.result === 'halfwin' ? 'bg-green-100 text-green-800' : bet.result === 'draw' ? 'bg-gray-200 text-gray-900' : bet.result === 'halfloss' ? 'bg-red-100 text-red-800' : 'bg-red-200 text-red-900')}>
+                                                            {bet.result === 'win' ? 'WON' : bet.result === 'halfwin' ? 'HALF WON' : bet.result === 'draw' ? 'DRAW' : bet.result === 'halfloss' ? 'HALF LOSS' : 'LOSS'}
                                                         </span>
                                             </td>
                                             <td className="border border-gray-300 p-3 font-semibold">{bet.actualGoals || '-'}</td>
